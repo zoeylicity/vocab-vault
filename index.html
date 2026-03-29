@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vocab Vault</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #0e0e11;
+    --card: #16161c;
+    --border: #2a2a35;
+    --accent: #c8a96e;
+    --accent2: #6e9ec8;
+    --text: #e8e4da;
+    --muted: #7a7870;
+    --danger: #c86e6e;
+    --green: #6ec88a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    background-image: radial-gradient(ellipse at 20% 0%, rgba(200,169,110,0.06) 0%, transparent 60%),
+                      radial-gradient(ellipse at 80% 100%, rgba(110,158,200,0.06) 0%, transparent 60%);
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 28px 48px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+
+  header span {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 48px;
+  }
+
+  .input-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 36px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .input-section::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), transparent);
+  }
+
+  .input-section label {
+    display: block;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .input-row input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 18px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .input-row input:focus {
+    border-color: var(--accent);
+  }
+
+  .input-row input::placeholder { color: var(--muted); }
+
+  .btn {
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0e0e11;
+  }
+  .btn-primary:hover { background: #d9bb85; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--accent2);
+    border: 1px solid var(--accent2);
+  }
+  .btn-secondary:hover { background: rgba(110,158,200,0.08); }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid transparent;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+  .btn-danger:hover { border-color: var(--danger); background: rgba(200,110,110,0.08); }
+
+  .hint {
+    margin-top: 10px;
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+  .hint b { color: var(--accent); font-weight: 500; }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .count-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--muted);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 14px;
+  }
+
+  .count-badge b { color: var(--accent); }
+
+  .search-input {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    outline: none;
+    width: 200px;
+    transition: border-color 0.2s;
+  }
+  .search-input:focus { border-color: var(--accent2); }
+  .search-input::placeholder { color: var(--muted); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+
+  thead tr {
+    border-bottom: 2px solid var(--border);
+  }
+
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  td {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(42,42,53,0.6);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .word-cell {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  .chinese-cell {
+    color: var(--text);
+    font-size: 0.87rem;
+    max-width: 180px;
+  }
+
+  .ipa-cell {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--accent2);
+    white-space: nowrap;
+    font-style: italic;
+  }
+
+  .example-cell {
+    color: #b0ad a4;
+    max-width: 380px;
+    font-size: 0.84rem;
+    color: #a8a49c;
+  }
+
+  .date-cell {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--muted);
+  }
+
+  .empty-state .icon { font-size: 3rem; margin-bottom: 16px; opacity: 0.4; }
+  .empty-state p { font-size: 0.9rem; }
+
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    background: var(--green);
+    color: #0e0e11;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 0.84rem;
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s;
+    pointer-events: none;
+    z-index: 999;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: var(--danger); }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px;
+    width: 90%;
+    max-width: 520px;
+    position: relative;
+  }
+
+  .modal h2 {
+    font-family: 'Playfair Display', serif;
+    color: var(--accent);
+    margin-bottom: 20px;
+    font-size: 1.3rem;
+  }
+
+  .modal .form-group { margin-bottom: 16px; }
+  .modal label { display: block; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .modal input, .modal textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: vertical;
+  }
+  .modal input:focus, .modal textarea:focus { border-color: var(--accent); }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+
+  @media (max-width: 700px) {
+    header { padding: 20px 20px; }
+    .container { padding: 24px 20px; }
+    .search-input { width: 140px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Vocab Vault</h1>
+  <span>YOUR PERSONAL LEXICON</span>
+</header>
+
+<div class="container">
+  <div class="input-section">
+    <label>Add New Word</label>
+    <div class="input-row">
+      <input type="text" id="wordInput" placeholder="e.g. ephemeral" />
+      <input type="text" id="chineseInput" placeholder="中文释义" />
+      <input type="text" id="ipaInput" placeholder="/ɪˈfem.ər.əl/" />
+      <button class="btn btn-primary" onclick="addWord()">+ Add</button>
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+      <input type="text" id="exampleInput" placeholder="Example sentence..." style="width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 18px; color:var(--text); font-family:'DM Mono',monospace; font-size:0.85rem; outline:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'" />
+    </div>
+    <p class="hint">Fill all fields manually, or use <b>vocab: word1, word2</b> in Claude chat — it will auto-populate this app when you import the exported data.</p>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="count-badge">Total: <b id="countDisplay">0</b> words</div>
+      <input type="text" class="search-input" id="searchInput" placeholder="Search..." oninput="renderTable()" />
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-secondary" onclick="exportXLSX()">⬇ Export Excel</button>
+      <button class="btn btn-secondary" onclick="openImport()" style="color:var(--muted); border-color:var(--border);">⬆ Import JSON</button>
+      <button class="btn btn-danger" onclick="clearAll()">Clear All</button>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:130px">Word</th>
+        <th style="width:180px">Chinese</th>
+        <th style="width:140px">IPA</th>
+        <th>Example Sentence</th>
+        <th style="width:90px">Added</th>
+        <th style="width:60px"></th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+
+  <div id="emptyState" class="empty-state" style="display:none;">
+    <div class="icon">📖</div>
+    <p>Your vault is empty. Add your first word above!</p>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <h2>Import JSON</h2>
+    <div class="form-group">
+      <label>Paste JSON data (exported from this app)</label>
+      <textarea id="importJson" rows="8" placeholder='[{"word":"...","chinese":"...","ipa":"...","example":"...","date":"..."}]'></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeImport()">Cancel</button>
+      <button class="btn btn-primary" onclick="doImport()">Import</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'vocabVault_v1';
+
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function showToast(msg, error = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (error ? ' error' : '');
+  setTimeout(() => t.className = 'toast', 2500);
+}
+
+function addWord() {
+  const word = document.getElementById('wordInput').value.trim();
+  const chinese = document.getElementById('chineseInput').value.trim();
+  const ipa = document.getElementById('ipaInput').value.trim();
+  const example = document.getElementById('exampleInput').value.trim();
+
+  if (!word || !chinese || !ipa || !example) {
+    showToast('Please fill in all fields.', true);
+    return;
+  }
+
+  const data = loadData();
+  const exists = data.find(d => d.word.toLowerCase() === word.toLowerCase());
+  if (exists) { showToast(`"${word}" is already in your vault.`, true); return; }
+
+  data.unshift({
+    word,
+    chinese,
+    ipa,
+    example,
+    date: new Date().toISOString().slice(0, 10)
+  });
+  saveData(data);
+
+  ['wordInput','chineseInput','ipaInput','exampleInput'].forEach(id => document.getElementById(id).value = '');
+  showToast(`"${word}" added to vault!`);
+  renderTable();
+}
+
+function deleteWord(index) {
+  const data = loadData();
+  const filtered = getFiltered(data);
+  const item = filtered[index];
+  const newData = data.filter(d => d !== item);
+  saveData(newData);
+  renderTable();
+  showToast(`"${item.word}" removed.`);
+}
+
+function getFiltered(data) {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  if (!q) return data;
+  return data.filter(d =>
+    d.word.toLowerCase().includes(q) ||
+    d.chinese.includes(q) ||
+    d.example.toLowerCase().includes(q)
+  );
+}
+
+function renderTable() {
+  const data = loadData();
+  const filtered = getFiltered(data);
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+
+  document.getElementById('countDisplay').textContent = data.length;
+
+  if (data.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = filtered.map((d, i) => `
+    <tr>
+      <td class="word-cell">${escHtml(d.word)}</td>
+      <td class="chinese-cell">${escHtml(d.chinese)}</td>
+      <td class="ipa-cell">${escHtml(d.ipa)}</td>
+      <td class="example-cell">${escHtml(d.example)}</td>
+      <td class="date-cell">${d.date || ''}</td>
+      <td><button class="btn btn-danger" onclick="deleteWord(${i})">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function exportXLSX() {
+  const data = loadData();
+  if (!data.length) { showToast('Nothing to export yet.', true); return; }
+
+  const ws_data = [
+    ['Word', 'Chinese Meaning', 'IPA', 'Example Sentence', 'Date Added'],
+    ...data.map(d => [d.word, d.chinese, d.ipa, d.example, d.date])
+  ];
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+  // Column widths
+  ws['!cols'] = [{ wch: 18 }, { wch: 28 }, { wch: 16 }, { wch: 70 }, { wch: 12 }];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Vocabulary');
+  XLSX.writeFile(wb, `VocabVault_${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast('Excel file downloaded!');
+}
+
+function openImport() {
+  document.getElementById('importModal').classList.add('open');
+}
+
+function closeImport() {
+  document.getElementById('importModal').classList.remove('open');
+  document.getElementById('importJson').value = '';
+}
+
+function doImport() {
+  try {
+    const raw = JSON.parse(document.getElementById('importJson').value.trim());
+    if (!Array.isArray(raw)) throw new Error();
+    const data = loadData();
+    let added = 0;
+    raw.forEach(item => {
+      if (!item.word) return;
+      if (!data.find(d => d.word.toLowerCase() === item.word.toLowerCase())) {
+        data.push({ ...item, date: item.date || new Date().toISOString().slice(0,10) });
+        added++;
+      }
+    });
+    saveData(data);
+    closeImport();
+    renderTable();
+    showToast(`Imported ${added} new word${added !== 1 ? 's' : ''}!`);
+  } catch {
+    showToast('Invalid JSON format.', true);
+  }
+}
+
+function clearAll() {
+  if (!confirm('Delete ALL words from your vault? This cannot be undone.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  renderTable();
+  showToast('Vault cleared.');
+}
+
+// Enter key to add
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.activeElement.closest('.input-section')) addWord();
+});
+
+renderTable();
+</script>
+</body>
+</html>
